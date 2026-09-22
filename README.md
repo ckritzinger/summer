@@ -45,7 +45,7 @@ pnpm preview    # serve the production build locally
 
 ## Deploy
 
-Deploys automatically to GitHub Pages on push to `main` via `.github/workflows/deploy.yml`. In the repo settings, set **Pages → Source → GitHub Actions**. The Vite `base` path is set to `/sum-blitz/` in `vite.config.js` to match the repo name — update it if the repo is renamed.
+Deploys automatically to GitHub Pages on push to `main` via `.github/workflows/deploy.yml`. In the repo settings, set **Pages → Source → GitHub Actions**. The Vite `base` path is set to `/summer/` in `vite.config.js` to match the repo name — update it if the repo is renamed.
 
 ## Project structure
 
