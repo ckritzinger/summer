@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "gray-on-color",
+        "value": "*",
+        "files": [
+          "src/components/Game.vue"
+        ],
+        "createdAt": "2026-09-22T14:32:07.902Z",
+        "reason": "slate-500 on slate-200 is the intentional muted/disabled look for an already-tried wrong answer, not a legibility bug"
+      }
+    ]
+  }
+}

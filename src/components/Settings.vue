@@ -6,7 +6,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['back', 'update-settings'])
 
-const local = reactive({ ...props.settings })
+const local = reactive({ ...props.settings, roundSeconds: Math.round((props.settings.roundMs ?? 30000) / 1000) })
 
 watch(
   local,
@@ -14,7 +14,9 @@ watch(
     const min = Math.max(1, Math.min(Number(val.rangeMin) || 1, 20))
     const max = Math.max(min, Math.min(Number(val.rangeMax) || min, 20))
     const rounds = Math.max(5, Math.min(Number(val.rounds) || 20, 100))
-    emit('update-settings', { rangeMin: min, rangeMax: max, rounds })
+    const roundSeconds = Math.max(3, Math.min(Number(val.roundSeconds) || 30, 60))
+    const allowMultipleTries = Boolean(val.allowMultipleTries)
+    emit('update-settings', { rangeMin: min, rangeMax: max, rounds, roundMs: roundSeconds * 1000, allowMultipleTries })
   },
   { deep: true },
 )
@@ -62,6 +64,22 @@ watch(
           max="100"
           class="w-16 rounded-lg border border-slate-300 px-2 py-1 text-center"
         />
+      </div>
+
+      <div class="mt-4 flex items-center justify-between gap-3">
+        <label class="text-sm font-semibold text-slate-600">Seconds per round</label>
+        <input
+          v-model.number="local.roundSeconds"
+          type="number"
+          min="3"
+          max="60"
+          class="w-16 rounded-lg border border-slate-300 px-2 py-1 text-center"
+        />
+      </div>
+
+      <div class="mt-4 flex items-center justify-between gap-3">
+        <label class="text-sm font-semibold text-slate-600">Allow multiple tries</label>
+        <input v-model="local.allowMultipleTries" type="checkbox" class="h-5 w-5 rounded accent-indigo-500" />
       </div>
     </div>
   </div>

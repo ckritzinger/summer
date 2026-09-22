@@ -6,12 +6,15 @@ const props = defineProps({
   rangeMin: { type: Number, required: true },
   rangeMax: { type: Number, required: true },
   rounds: { type: Number, required: true },
+  roundMs: { type: Number, required: true },
+  allowMultipleTries: { type: Boolean, required: true },
 })
 const emit = defineEmits(['finish'])
 
-const ROUND_MS = 10000
-const HALF_LIFE_MS = 3000 // asymptotic decay rate
-const AUTO_MISS_ELAPSED_MS = 15000 // hard wall-clock cap
+// Decay rate and hard cap scale with roundMs, keeping the same feel as the
+// original fixed-10s round (3s half-life, 15s hard cap) at any duration.
+const HALF_LIFE_MS = props.roundMs * 0.3
+const AUTO_MISS_ELAPSED_MS = props.roundMs * 1.5
 const AUTO_MISS_REMAINING_MS = 50 // negligible-threshold floor
 
 const MULTIPLIERS = [1, 1.5, 2, 2.5]
@@ -37,7 +40,8 @@ const streak = ref(0)
 const x = ref(0)
 const y = ref(0)
 const buttons = ref([])
-const remainingMs = ref(ROUND_MS)
+const remainingMs = ref(props.roundMs)
+const wrongAttempts = ref(new Set()) // values tried and wrong this round (multi-try mode)
 const locked = ref(false) // true while a tap's feedback is resolving
 const feedback = reactive({ id: null, correct: null }) // per-button feedback
 const roundResult = ref(null) // 'correct' | 'incorrect' | null, drives screen flash
@@ -53,7 +57,7 @@ let rafId = null
 let particleSeq = 0
 
 const currentMultiplier = computed(() => MULTIPLIERS[Math.min(streak.value, MULTIPLIERS.length - 1)])
-const barPercent = computed(() => Math.max(0, Math.min(100, (remainingMs.value / ROUND_MS) * 100)))
+const barPercent = computed(() => Math.max(0, Math.min(100, (remainingMs.value / props.roundMs) * 100)))
 const barColor = computed(() => {
   const pct = barPercent.value
   if (pct > 50) return 'bg-emerald-400'
@@ -108,7 +112,8 @@ function startRound() {
   x.value = pair.x
   y.value = pair.y
   buttons.value = generateGrid(pair.x, pair.y, props.rangeMin, props.rangeMax)
-  remainingMs.value = ROUND_MS
+  remainingMs.value = props.roundMs
+  wrongAttempts.value = new Set()
   roundStartTime = performance.now()
   locked.value = false
   roundResult.value = null
@@ -119,7 +124,7 @@ function startRound() {
 
 function tick() {
   const elapsed = performance.now() - roundStartTime
-  const remaining = ROUND_MS * Math.pow(0.5, elapsed / HALF_LIFE_MS)
+  const remaining = props.roundMs * Math.pow(0.5, elapsed / HALF_LIFE_MS)
   remainingMs.value = remaining
 
   if (locked.value) return
@@ -132,8 +137,25 @@ function tick() {
 }
 
 function handleTap(button, event) {
-  if (locked.value) return
+  if (locked.value || wrongAttempts.value.has(button.value)) return
   event?.currentTarget?.blur()
+
+  if (!button.correct && props.allowMultipleTries) {
+    // Wrong guess, but tries are unlimited: mark it dead, break the streak,
+    // and let the timer keep running instead of ending the round.
+    wrongAttempts.value.add(button.value)
+    if (streak.value > 0) streak.value = 0
+    feedback.id = button.value
+    feedback.correct = false
+    setTimeout(() => {
+      if (feedback.id === button.value) {
+        feedback.id = null
+        feedback.correct = null
+      }
+    }, 300)
+    return
+  }
+
   resolveRound(button, button.correct, event)
 }
 
@@ -240,17 +262,19 @@ onBeforeUnmount(() => {
       <button
         v-for="(btn, i) in buttons"
         :key="`${roundIndex}-${i}`"
-        :disabled="locked"
+        :disabled="locked || wrongAttempts.has(btn.value)"
         @click="handleTap(btn, $event)"
         class="aspect-square rounded-2xl text-xl font-bold shadow-sm transition-all duration-150 sm:text-2xl"
         :class="[
-          locked && feedback.id === btn.value && feedback.correct
+          feedback.id === btn.value && feedback.correct
             ? 'bg-emerald-400 text-white animate-pop'
-            : locked && feedback.id === btn.value && !feedback.correct
+            : feedback.id === btn.value && !feedback.correct
               ? 'bg-rose-400 text-white animate-shake'
               : locked && btn.correct
                 ? 'bg-emerald-200 text-emerald-800'
-                : 'bg-white text-slate-800 hover:bg-indigo-50 active:scale-95',
+                : wrongAttempts.has(btn.value)
+                  ? 'bg-slate-200 text-slate-500 line-through'
+                  : 'bg-white text-slate-800 hover:bg-indigo-50 active:scale-95',
         ]"
       >
         {{ btn.value }}

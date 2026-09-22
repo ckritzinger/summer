@@ -95,6 +95,8 @@ function switchUser() {
     :range-min="settings.rangeMin"
     :range-max="settings.rangeMax"
     :rounds="settings.rounds"
+    :round-ms="settings.roundMs"
+    :allow-multiple-tries="settings.allowMultipleTries"
     @finish="finishGame"
   />
 

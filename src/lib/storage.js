@@ -4,8 +4,10 @@ const ACTIVE_USER_KEY = 'tts_active_user'
 
 const DEFAULT_SETTINGS = {
   rangeMin: 1,
-  rangeMax: 12,
+  rangeMax: 5,
   rounds: 20,
+  roundMs: 30000,
+  allowMultipleTries: true,
 }
 
 export const AVATARS = ['🦁', '🐯', '🐸', '🐵', '🦊', '🐼', '🦄', '🐙', '🦖', '🐝', '🦋', '🐢']
